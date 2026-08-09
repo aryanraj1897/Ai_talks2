@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # 1. Redis Session Memory Store
+  redis:
+    image: redis:7-alpine
+    container_name: abtalks_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 2. FastAPI + LangGraph + ChromaDB Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: abtalks_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-""}
+      - OPENAI_MODEL=${OPENAI_MODEL:-"gpt-4o"}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CHROMA_PERSIST_DIR=/app/chroma_db_data
+      - CURRICULUM_PATH=/app/data/curriculum.json
+      - CANDIDATES_PATH=/app/data/candidates.json
+      - SPECS_PATH=/app/data/technical-specs.md
+      - LOG_LEVEL=INFO
+      - APP_NAME=ABTalks AI Technical Interviewer
+    volumes:
+      - chroma_data:/app/chroma_db_data
+      - ./data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+
+  # 3. Next.js 15 Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: abtalks_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  redis_data:
+  chroma_data:

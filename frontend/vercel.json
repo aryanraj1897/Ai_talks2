@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://abtalks-backend.onrender.com/api/v1/:path*"
+    }
+  ]
+}
